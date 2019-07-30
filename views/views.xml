@@ -1,0 +1,123 @@
+<openerp>
+  <data>
+
+    <!-- configuracion tree -->
+    
+    <record model="ir.ui.view" id="configuracion_tree">
+      <field name="name">financiera.bna.debito.automatico.configuracion tree</field>
+      <field name="model">financiera.bna.debito.automatico.configuracion</field>
+      <field name="arch" type="xml">
+        <tree>
+          <field name="name"/>
+        </tree>
+      </field>
+    </record>
+
+
+    <record model="ir.ui.view" id="configuracion_form">
+      <field name="name">financiera.bna.debito.automatico.configuracion form</field>
+      <field name="model">financiera.bna.debito.automatico.configuracion</field>
+      <field name="arch" type="xml">
+        <form>
+          <sheet>
+            <group>
+              <field name="company_id" groups="base.group_erp_manager"/>
+              <field name="name"/>
+              <field name="sucursal_bna_recaudacion" required="1"/>
+              <field name="tipo_moneda_cuenta" required="1"/>
+              <field name="cuenta_bna_recaudacion" required="1"/>
+            </group>
+          </sheet>
+        </form>
+      </field>
+    </record>
+
+    <record model="ir.actions.act_window" id="configuracion_action">
+      <field name="name">Configuracion</field>
+      <field name="res_model">financiera.bna.debito.automatico.configuracion</field>
+      <field name="view_mode">tree,form</field>
+      <!-- <field name="context">{'search_default_pendientes':0}</field> -->
+      <field name="view_ids" eval="[(5, 0, 0), 
+        (0, 0, {'view_mode': 'tree', 'view_id': ref('configuracion_tree')}), 
+        (0, 0, {'view_mode': 'form', 'view_id': ref('configuracion_form')})]"/>
+    </record>
+
+    <!-- movimientos tree -->
+    
+    <record model="ir.ui.view" id="movimiento_tree">
+      <field name="name">financiera.bna.debito.automatico.movimiento tree</field>
+      <field name="model">financiera.bna.debito.automatico.movimiento</field>
+      <field name="arch" type="xml">
+        <tree>
+          <field name="configuracion_id"/>
+          <field name="moneda_movimiento"/>
+          <field name="fecha_tope_rendicion"/>
+          <field name="cuota_ids"/>
+          <field name="state"/>
+        </tree>
+      </field>
+    </record>
+
+
+    <record model="ir.ui.view" id="movimiento_form">
+      <field name="name">financiera.bna.debito.automatico.movimiento form</field>
+      <field name="model">financiera.bna.debito.automatico.movimiento</field>
+      <field name="arch" type="xml">
+        <form>
+          <header>
+            <field name="state" widget="statusbar"/>
+          </header>
+          <sheet>
+            <group>
+              <field name="company_id" groups="base.group_erp_manager"/>
+              <field name="configuracion_id"/>
+              <field name="moneda_movimiento" required="1"/>
+              <field name="fecha_tope_rendicion" required="1"/>
+            </group>
+            <notebook>
+              <page string="Cuotas">
+                <field name="cuota_ids">
+                    <tree string="Cuotas" create="false" edit="false" delete="false">
+                      <field name="numero_cuota" editable="1"/>
+                      <field name="fecha_vencimiento" editable="1"/>
+                      <field name="currency_id" invisible="1"/>
+                      <field name="saldo_capital" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+                      <field name="total" widget="monetary" options="{'currency_field': 'currency_id'}" sum="Total"/>
+                      <field name="cobrado" widget="monetary" options="{'currency_field': 'currency_id'}" sum="Total"/>
+                      <field name="saldo" widget="monetary" options="{'currency_field': 'currency_id'}" sum="Total"/>
+                    </tree>
+                </field>
+              </page>
+            </notebook>
+          </sheet>
+        </form>
+      </field>
+    </record>
+
+    <record model="ir.actions.act_window" id="movimiento_action">
+      <field name="name">Configuracion</field>
+      <field name="res_model">financiera.bna.debito.automatico.movimiento</field>
+      <field name="view_mode">tree,form</field>
+      <!-- <field name="context">{'search_default_pendientes':0}</field> -->
+      <field name="view_ids" eval="[(5, 0, 0), 
+        (0, 0, {'view_mode': 'tree', 'view_id': ref('movimiento_tree')}), 
+        (0, 0, {'view_mode': 'form', 'view_id': ref('movimiento_form')})]"/>
+    </record>
+    
+    <!-- Top menu item -->
+    
+    <menuitem name="BNA Debito Automatico" id="menu_cobros" web_icon="financiera_bna_debito_automatico,static/description/icon.png"/> <!-- groups="financiera_prestamos.user" -->
+    
+    <!-- menu categories -->
+
+    <menuitem name="Movimientos" id="menu_bna_movimientos" sequence="10" parent="menu_cobros"/>
+    <menuitem name="Configuracion" id="menu_bna_configuracion" sequence="20" parent="menu_cobros"/>
+
+    <!-- actions -->
+
+    <menuitem name="Movimientos" id="menu_movimientos_action" parent="menu_bna_movimientos" action="movimiento_action" sequence="0"/>
+    
+    <menuitem name="Configuracion" id="menu_configuracion_action" parent="menu_bna_configuracion" action="configuracion_action" sequence="0"/>
+
+  </data>
+</openerp>
