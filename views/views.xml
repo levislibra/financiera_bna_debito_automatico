@@ -49,6 +49,7 @@
       <field name="model">financiera.bna.debito.automatico.movimiento</field>
       <field name="arch" type="xml">
         <tree>
+          <field name="name"/>
           <field name="configuracion_id"/>
           <field name="moneda_movimiento"/>
           <field name="fecha_tope_rendicion"/>
@@ -65,14 +66,26 @@
       <field name="arch" type="xml">
         <form>
           <header>
+            <button name="generar_archivo" states="borrador" string="Generar archivo" type="object" class="oe_highlight"/>
+            <button name="enviar_a_borrador" states="generado" string="Enviar a borrador" type="object"/>
+            <button name="aplicar_archivo" states="generado" string="Aplicar archivo" type="object" class="oe_highlight"/>
             <field name="state" widget="statusbar"/>
           </header>
           <sheet>
             <group>
-              <field name="company_id" groups="base.group_erp_manager"/>
-              <field name="configuracion_id"/>
-              <field name="moneda_movimiento" required="1"/>
-              <field name="fecha_tope_rendicion" required="1"/>
+              <group>
+                <field name="company_id" groups="base.group_erp_manager"/>
+                <field name="configuracion_id" required="1"/>
+                <field name="moneda_movimiento" required="1"/>
+                <field name="fecha_tope_rendicion" required="1"/>
+                <field name="mes_tope_rendicion" required="1"/>
+                <field name="nro_archivo_enviado_mes" required="1"/>
+                <field name="archivo_generado"/>
+              </group>
+              <group>
+                <field name="empleados_bna" required="1"/>
+                <field name="archivo_resultado"/>
+              </group>
             </group>
             <notebook>
               <page string="Cuotas">
