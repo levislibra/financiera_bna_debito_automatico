@@ -89,8 +89,8 @@
             </group>
             <notebook>
               <page string="Cuotas">
-                <field name="cuota_ids">
-                    <tree string="Cuotas" create="false" edit="false" delete="false">
+                <field name="cuota_ids" widget="many2many">
+                    <tree string="Cuotas">
                       <field name="numero_cuota" editable="1"/>
                       <field name="fecha_vencimiento" editable="1"/>
                       <field name="currency_id" invisible="1"/>

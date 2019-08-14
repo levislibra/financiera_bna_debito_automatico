@@ -3,6 +3,8 @@
 from openerp import models, fields, api
 from datetime import datetime, timedelta
 import time
+import base64
+from tempfile import TemporaryFile
 
 class FinancieraBnaDebitoAutomaticoConfiguracion(models.Model):
 	_name = 'financiera.bna.debito.automatico.configuracion'
@@ -53,6 +55,31 @@ class FinancieraBnaDebitoAutomaticoMovimiento(models.Model):
 
 	@api.one
 	def generar_archivo(self):
+		file = TemporaryFile('w+')
+		fecha_tope_rendicion = datetime.strptime(self.fecha_tope_rendicion, "%Y-%m-%d")
+		# Escribimos el encabezado
+		encabezado = "1"
+		encabezado += self.configuracion_id.sucursal_bna_recaudacion
+		encabezado += str(self.configuracion_id.tipo_moneda_cuenta)
+		encabezado += self.configuracion_id.cuenta_bna_recaudacion
+		encabezado += str(self.moneda_movimiento)
+		encabezado += "E"
+		encabezado += self.mes_tope_rendicion
+		encabezado += self.nro_archivo_enviado_mes
+		encabezado += str(fecha_tope_rendicion.year)
+		encabezado += str(fecha_tope_rendicion.month).zfill(2)
+		encabezado += str(fecha_tope_rendicion.day).zfill(2)
+		encabezado += str(self.empleados_bna)
+		encabezado += "                                                                                              \n"
+		# Escribimos los registro tipo 2
+		for cuota_id in self.cuota_ids:
+			registros = "2\n"
+		# file.write(encabezado)
+		# file.seek(0) # this will send you to the beginning of the file
+		file_read = base64.b64encode(encabezado+registros)
+		self.archivo_generado = file_read
+		# file.close()
+
 		self.write({
 			'state': 'generado',
 		})
