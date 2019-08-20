@@ -91,13 +91,23 @@
               <page string="Cuotas">
                 <field name="cuota_ids" widget="many2many">
                     <tree string="Cuotas">
-                      <field name="numero_cuota" editable="1"/>
-                      <field name="fecha_vencimiento" editable="1"/>
+                      <field name="name"/>
+                      <field name="numero_cuota"/>
+                      <field name="fecha_vencimiento"/>
                       <field name="currency_id" invisible="1"/>
-                      <field name="saldo_capital" widget="monetary" options="{'currency_field': 'currency_id'}"/>
                       <field name="total" widget="monetary" options="{'currency_field': 'currency_id'}" sum="Total"/>
                       <field name="cobrado" widget="monetary" options="{'currency_field': 'currency_id'}" sum="Total"/>
                       <field name="saldo" widget="monetary" options="{'currency_field': 'currency_id'}" sum="Total"/>
+                    </tree>
+                </field>
+              </page>
+              <page string="Resultado" readonly="1">
+                <field name="movimiento_linea_ids">
+                    <tree string="Resultado" create="false" edit="false" delete="false">
+                      <field name="cuota_id"/>
+                      <field name="descripcion"/>
+                      <field name="fecha_del_debito"/>
+                      <field name="state"/>
                     </tree>
                 </field>
               </page>
