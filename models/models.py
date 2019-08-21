@@ -30,7 +30,7 @@ class FinancieraBnaDebitoAutomaticoMovimiento(models.Model):
 	name = fields.Char('Nombre', compute='_compute_name')
 	configuracion_id = fields.Many2one('financiera.bna.debito.automatico.configuracion', 'Cuenta de Recaudacion')
 	state = fields.Selection(
-		[('borrador', 'Borrador'), ('generado', 'Generado'), ('finalizado', 'Finalizado')],
+		[('borrador', 'Borrador'), ('generado', 'Generado'), ('cancelado', 'Cancelado'), ('finalizado', 'Finalizado')],
 		string='Estado', default='borrador')
 	moneda_movimiento = fields.Selection(
 		[('P', 'Pesos'), ('D', 'Dolares')],
@@ -45,7 +45,7 @@ class FinancieraBnaDebitoAutomaticoMovimiento(models.Model):
 	nro_archivo_enviado_mes = fields.Char('Nro de archivo que se envia en el mes', help='Comenzando desde 01', size=2)
 	archivo_generado = fields.Binary('Archivo generado')
 	archivo_resultado = fields.Binary('Archivo resultado')
-
+	cuota_fecha_hasta = fields.Date("Fecha hasta")
 	cuota_ids = fields.Many2many('financiera.prestamo.cuota', 'financiera_bna_movimiento_cuota_rel', 'bna_movimiento_id', 'cuota_id', 'Cuotas')
 	movimiento_linea_ids = fields.One2many('financiera.bna.debito.automatico.movimiento.linea','movimiento_id', 'Resultados')
 	company_id = fields.Many2one('res.company', 'Empresa', required=False, default=lambda self: self.env['res.company']._company_default_get('financiera.bna.debito.automatico.movimiento'))
@@ -54,6 +54,19 @@ class FinancieraBnaDebitoAutomaticoMovimiento(models.Model):
 	@api.one
 	def _compute_name(self):
 		self.name = 'Mes '+self.mes_tope_rendicion+' - Archivo '+self.nro_archivo_enviado_mes
+
+	@api.one
+	def asignar_cuotas(self):
+		cr = self.env.cr
+		uid = self.env.uid
+		cuota_obj = self.pool.get('financiera.prestamo.cuota')
+		cuota_ids = cuota_obj.search(cr, uid, [
+			('state', '=', 'activa'),
+			('debito_automatico_cuota', '=', True),
+			('bna_debito_disponible', '=', True),
+			('fecha_vencimiento', '<=', self.cuota_fecha_hasta),
+			('company_id', '=', self.company_id.id)])
+		self.cuota_ids = [(6, 0, cuota_ids)]
 
 	@api.one
 	def generar_archivo(self):
@@ -109,7 +122,7 @@ class FinancieraBnaDebitoAutomaticoMovimiento(models.Model):
 				# Empresa campo N(10) de uso interno
 				ml_values = {
 					'cuota_id': cuota_id.id,
-					# 'movimiento_id', self.id,
+					'monto_a_debitar': cuota_id.saldo,
 				}
 				new_movimiento_linea_id = self.env['financiera.bna.debito.automatico.movimiento.linea'].create(ml_values)
 				self.movimiento_linea_ids = [new_movimiento_linea_id.id]
@@ -140,15 +153,24 @@ class FinancieraBnaDebitoAutomaticoMovimiento(models.Model):
 		})
 
 	@api.one
-	def enviar_a_borrador(self):
+	def enviar_a_cancelado(self):
 		for cuota_id in self.cuota_ids:
 			cuota_id.bna_debito_disponible = True
-		for movimiento_linea_id in self.movimiento_linea_ids:
-			movimiento_linea_id.unlink()
-		# Se deberia eliminar el archivo generado
-		self.archivo_generado = None
+		for movimiento_line_id in self.movimiento_linea_ids:
+			movimiento_line_id.state = 'cancelado'
 		self.write({
-			'state': 'borrador',
+			'state': 'cancelado',
+		})
+
+	@api.one
+	def enviar_a_generado(self):
+		for cuota_id in self.cuota_ids:
+			if cuota_id.bna_debito_disponible:
+				cuota_id.bna_debito_disponible = False
+			else:
+				raise ValidationError("La cuota: "+str(cuota_id.name) + "ya no esta disponible para debito por cbu.")
+		self.write({
+			'state': 'generado',
 		})
 
 	@api.one
@@ -156,14 +178,6 @@ class FinancieraBnaDebitoAutomaticoMovimiento(models.Model):
 		self.write({
 			'state': 'finalizado',
 		})
-
-	# def mes_to_maskmes(self, mes):
-	# 	ret = None
-	# 	if mes >= 1 and mes <= 9:
-	# 		ret = "0" + str(mes)
-	# 	elif mes >= 10 and mes <= 12:
-	# 		ret = str(mes)
-	# 	return ret
 
 	@api.onchange('fecha_tope_rendicion')
 	def _onchange_fecha_tope_rendicion(self):
@@ -193,16 +207,19 @@ class FinancieraBnaDebitoAutomaticoMovimiento(models.Model):
 class FinancieraBnaDebitoAutomaticoMovimientoCuota(models.Model):
 	_name = 'financiera.bna.debito.automatico.movimiento.linea'
 
-	# name = fields.Char('Nombre', compute='_compute_name')
 	_rec = 'cuota_id'
 	movimiento_id = fields.Many2one('financiera.bna.debito.automatico.movimiento', 'Movimiento de debito automatico')
 	cuota_id = fields.Many2one('financiera.prestamo.cuota', 'Cuota')
+	monto_a_debitar = fields.Float('Monto a debitar', digits=(16,2))
+	monto_debitado = fields.Float('Monto debitado', digits=(16,2))
+	monto_no_debitado = fields.Float('Monto no debitado', digits=(16,2))
 	descripcion = fields.Char('Descripcion del rechazo', size=30)
 	fecha_del_debito = fields.Date('Fecha del debito')
 	state = fields.Selection(
 		[('borrador', 'Borrador'),
 		(0, 'Cobrado'),
-		(9, 'Rechazado')],
+		(9, 'Rechazado'),
+		('cancelado', 'Cancelado')],
 		string='Estado', default='borrador')
 	company_id = fields.Many2one('res.company', 'Empresa', required=False, default=lambda self: self.env['res.company']._company_default_get('financiera.bna.debito.automatico.movimiento.linea'))
 

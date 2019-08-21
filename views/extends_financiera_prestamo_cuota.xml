@@ -1,0 +1,17 @@
+<openerp>
+  <data>
+
+
+	    <record id="prestamo_cuota_form_inherited"  model="ir.ui.view">
+	      <field name="name">Extension Prestamo Cuota Form</field>
+	      <field name="model">financiera.prestamo.cuota</field>
+	      <field name="inherit_id" ref="financiera_prestamos.financiera_prestamo_cuota_form"/>
+	      <field name="arch" type="xml">        
+	        <xpath expr="//field[@name='debito_bank_id']" position="after">
+	          <field name="bna_debito_disponible"/>
+	        </xpath>
+	      </field>
+	    </record>
+
+	</data>
+</openerp>

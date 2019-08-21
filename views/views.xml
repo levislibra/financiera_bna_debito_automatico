@@ -67,32 +67,41 @@
         <form>
           <header>
             <button name="generar_archivo" states="borrador" string="Generar archivo" type="object" class="oe_highlight"/>
-            <button name="enviar_a_borrador" states="generado" string="Enviar a borrador" type="object"/>
+            <button name="enviar_a_cancelado" states="generado" string="Cancelar" type="object"/>
+            <button name="enviar_a_generado" states="cancelado" string="Recuperar" type="object"/>
             <button name="aplicar_archivo" states="generado" string="Aplicar archivo" type="object" class="oe_highlight"/>
             <field name="state" widget="statusbar"/>
           </header>
           <sheet>
             <group>
               <group>
-                <field name="company_id" groups="base.group_erp_manager"/>
-                <field name="configuracion_id" required="1"/>
-                <field name="moneda_movimiento" required="1"/>
-                <field name="fecha_tope_rendicion" required="1"/>
-                <field name="mes_tope_rendicion" required="1"/>
-                <field name="nro_archivo_enviado_mes" required="1"/>
-                <field name="archivo_generado"/>
+                <field name="company_id" attrs="{'readonly': [('state', '!=', 'borrador')]}" groups="base.group_erp_manager"/>
+                <field name="configuracion_id" attrs="{'readonly': [('state', '!=', 'borrador')]}" required="1"/>
+                <field name="moneda_movimiento" attrs="{'readonly': [('state', '!=', 'borrador')]}" required="1"/>
+                <field name="fecha_tope_rendicion" attrs="{'readonly': [('state', '!=', 'borrador')]}" required="1"/>
+                <field name="mes_tope_rendicion" attrs="{'readonly': [('state', '!=', 'borrador')]}" required="1"/>
+                <field name="nro_archivo_enviado_mes" attrs="{'readonly': [('state', '!=', 'borrador')]}" required="1"/>
+                <field name="archivo_generado" attrs="{'readonly': [('state', '!=', 'borrador')]}"/>
               </group>
               <group>
-                <field name="empleados_bna" required="1"/>
+                <field name="empleados_bna" attrs="{'readonly': [('state', '!=', 'borrador')]}" required="1"/>
                 <field name="archivo_resultado"/>
               </group>
             </group>
             <notebook>
               <page string="Cuotas">
-                <field name="cuota_ids" widget="many2many">
+                <group>
+                  <group>
+                    <field name="cuota_fecha_hasta" attrs="{'readonly': [('state', '!=', 'borrador')]}"/>
+                  </group>
+                  <group>
+                  </group>
+                </group>
+                <button name="asignar_cuotas" states="borrador" string="Asignar cuotas" type="object" class="oe_highlight"/>
+                <field name="cuota_ids" attrs="{'readonly': [('state', '!=', 'borrador')]}" widget="many2many">
                     <tree string="Cuotas">
                       <field name="name"/>
-                      <field name="numero_cuota"/>
+                      <field name="display_numero_cuota"/>
                       <field name="fecha_vencimiento"/>
                       <field name="currency_id" invisible="1"/>
                       <field name="total" widget="monetary" options="{'currency_field': 'currency_id'}" sum="Total"/>
@@ -105,6 +114,9 @@
                 <field name="movimiento_linea_ids">
                     <tree string="Resultado" create="false" edit="false" delete="false">
                       <field name="cuota_id"/>
+                      <field name="monto_a_debitar" sum="Total a debitar"/>
+                      <field name="monto_debitado" sum="Total debitado"/>
+                      <field name="monto_no_debitado" sum="Total no debitado"/>
                       <field name="descripcion"/>
                       <field name="fecha_del_debito"/>
                       <field name="state"/>
