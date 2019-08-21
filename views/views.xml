@@ -53,12 +53,22 @@
           <field name="configuracion_id"/>
           <field name="moneda_movimiento"/>
           <field name="fecha_tope_rendicion"/>
-          <field name="cuota_ids"/>
           <field name="state"/>
         </tree>
       </field>
     </record>
 
+
+    <record model="ir.ui.view" id="filter_bna_movimiento_view">
+      <field name="name">financiera.bna.debito.automatico.movimiento.filter</field>
+      <field name="model">financiera.bna.debito.automatico.movimiento</field>
+      <field name="arch" type="xml">
+        <search>
+          <filter string="Activas" name="activa" domain="[('state', '!=', 'cancelado')]"/>
+          <filter string="Canceladas" name="cancelada" domain="[('state', '=', 'cancelado')]"/>
+        </search>
+      </field>
+    </record>
 
     <record model="ir.ui.view" id="movimiento_form">
       <field name="name">financiera.bna.debito.automatico.movimiento form</field>
@@ -67,9 +77,9 @@
         <form>
           <header>
             <button name="generar_archivo" states="borrador" string="Generar archivo" type="object" class="oe_highlight"/>
-            <button name="enviar_a_cancelado" states="generado" string="Cancelar" type="object"/>
+            <button name="enviar_a_cancelado" states="generado,aplicado" string="Cancelar" type="object"/>
             <button name="enviar_a_generado" states="cancelado" string="Recuperar" type="object"/>
-            <button name="aplicar_archivo" states="generado" string="Aplicar archivo" type="object" class="oe_highlight"/>
+            <button name="aplicar_archivo"  string="Aplicar archivo" type="object" class="oe_highlight"/>
             <field name="state" widget="statusbar"/>
           </header>
           <sheet>
@@ -81,11 +91,11 @@
                 <field name="fecha_tope_rendicion" attrs="{'readonly': [('state', '!=', 'borrador')]}" required="1"/>
                 <field name="mes_tope_rendicion" attrs="{'readonly': [('state', '!=', 'borrador')]}" required="1"/>
                 <field name="nro_archivo_enviado_mes" attrs="{'readonly': [('state', '!=', 'borrador')]}" required="1"/>
-                <field name="archivo_generado" attrs="{'readonly': [('state', '!=', 'borrador')]}"/>
+                <field name="archivo_generado" readonly="1"/>
               </group>
               <group>
                 <field name="empleados_bna" attrs="{'readonly': [('state', '!=', 'borrador')]}" required="1"/>
-                <field name="archivo_resultado"/>
+                <field name="archivo_resultado" attrs="{'readonly': [('state', '!=', 'generado')]}"/>
               </group>
             </group>
             <notebook>
@@ -111,16 +121,22 @@
                 </field>
               </page>
               <page string="Resultado" readonly="1">
+                <group>
+                    <field name="monto_debitado" readonly="1"/>
+                    <field name="cantidad_registros_aplicados" readonly="1"/>
+                    <field name="monto_no_debitado" readonly="1"/>
+                    <field name="cantidad_registros_no_aplicados" readonly="1"/>
+                  </group>
                 <field name="movimiento_linea_ids">
-                    <tree string="Resultado" create="false" edit="false" delete="false">
-                      <field name="cuota_id"/>
-                      <field name="monto_a_debitar" sum="Total a debitar"/>
-                      <field name="monto_debitado" sum="Total debitado"/>
-                      <field name="monto_no_debitado" sum="Total no debitado"/>
-                      <field name="descripcion"/>
-                      <field name="fecha_del_debito"/>
-                      <field name="state"/>
-                    </tree>
+                  <tree string="Resultado" create="false" edit="false" delete="false">
+                    <field name="cuota_id"/>
+                    <field name="monto_a_debitar" sum="Total a debitar"/>
+                    <field name="monto_debitado" sum="Total debitado"/>
+                    <field name="monto_no_debitado" sum="Total no debitado"/>
+                    <field name="descripcion"/>
+                    <field name="fecha_debito"/>
+                    <field name="state"/>
+                  </tree>
                 </field>
               </page>
             </notebook>
@@ -133,7 +149,7 @@
       <field name="name">Configuracion</field>
       <field name="res_model">financiera.bna.debito.automatico.movimiento</field>
       <field name="view_mode">tree,form</field>
-      <!-- <field name="context">{'search_default_pendientes':0}</field> -->
+      <field name="context">{'search_default_activa':1}</field>
       <field name="view_ids" eval="[(5, 0, 0), 
         (0, 0, {'view_mode': 'tree', 'view_id': ref('movimiento_tree')}), 
         (0, 0, {'view_mode': 'form', 'view_id': ref('movimiento_form')})]"/>

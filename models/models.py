@@ -5,7 +5,6 @@ from datetime import datetime, timedelta
 from openerp.exceptions import UserError, ValidationError
 import time
 import base64
-from tempfile import TemporaryFile
 
 class FinancieraBnaDebitoAutomaticoConfiguracion(models.Model):
 	_name = 'financiera.bna.debito.automatico.configuracion'
@@ -27,10 +26,15 @@ class FinancieraBnaDebitoAutomaticoConfiguracion(models.Model):
 class FinancieraBnaDebitoAutomaticoMovimiento(models.Model):
 	_name = 'financiera.bna.debito.automatico.movimiento'
 
+	_order = 'id desc'
 	name = fields.Char('Nombre', compute='_compute_name')
 	configuracion_id = fields.Many2one('financiera.bna.debito.automatico.configuracion', 'Cuenta de Recaudacion')
 	state = fields.Selection(
-		[('borrador', 'Borrador'), ('generado', 'Generado'), ('cancelado', 'Cancelado'), ('finalizado', 'Finalizado')],
+		[('borrador', 'Borrador'),
+		('generado', 'Generado'),
+		('aplicado', 'Aplicado'),
+		('finalizado', 'Finalizado'),
+		('cancelado', 'Cancelado')],
 		string='Estado', default='borrador')
 	moneda_movimiento = fields.Selection(
 		[('P', 'Pesos'), ('D', 'Dolares')],
@@ -48,6 +52,10 @@ class FinancieraBnaDebitoAutomaticoMovimiento(models.Model):
 	cuota_fecha_hasta = fields.Date("Fecha hasta")
 	cuota_ids = fields.Many2many('financiera.prestamo.cuota', 'financiera_bna_movimiento_cuota_rel', 'bna_movimiento_id', 'cuota_id', 'Cuotas')
 	movimiento_linea_ids = fields.One2many('financiera.bna.debito.automatico.movimiento.linea','movimiento_id', 'Resultados')
+	monto_debitado = fields.Float('Monto debitado', digits=(16,2))
+	cantidad_registros_aplicados = fields.Integer('Registros aplicados')
+	monto_no_debitado = fields.Float('Monto no debitado', digits=(16,2))
+	cantidad_registros_no_aplicados = fields.Integer('Registros no aplicados')
 	company_id = fields.Many2one('res.company', 'Empresa', required=False, default=lambda self: self.env['res.company']._company_default_get('financiera.bna.debito.automatico.movimiento'))
 
 
@@ -70,7 +78,6 @@ class FinancieraBnaDebitoAutomaticoMovimiento(models.Model):
 
 	@api.one
 	def generar_archivo(self):
-		file = TemporaryFile('w+')
 		fecha_tope_rendicion = datetime.strptime(self.fecha_tope_rendicion, "%Y-%m-%d")
 		# Escribimos el encabezado
 		encabezado = "1"
@@ -153,11 +160,81 @@ class FinancieraBnaDebitoAutomaticoMovimiento(models.Model):
 		})
 
 	@api.one
+	def aplicar_archivo(self):
+		if self.archivo_resultado == None:
+			raise ValidationError('El archivo resultado no fue cargado')
+		texto_resultado = self.archivo_resultado.decode('base64')
+		registros = texto_resultado.split('\n')
+		len_registros = len(registros)
+		if len(registros[len_registros-1]) == 0:
+			del registros[len_registros-1]
+			len_registros -= 1
+		i = 1
+		for registro in registros:
+			if len(registro) != 128:
+				raise ValidationError("Error de longitud de registro en archivo de resultado.")
+			else:
+				# Comenzamos a analizar el registro
+				if i == 1:
+					# Es registro tipo 1
+					if registro[0:1] != '1':
+						raise ValidationError("El registro tipo 1 es incorrecto.")
+					if registro[18:19] != 'D':
+						raise ValidationError("El registro tipo 1 es incorrecto. BNA deberia devolver D como identificador.")
+				elif i == len_registros:
+					# Es registro tipo 3
+					if registro[0:1] != '3':
+						raise ValidationError("El registro tipo 3 es incorrecto.")
+					parte_entera_string = registro[1:14]
+					parte_decimal_string = registro[14:16]
+					self.monto_debitado = float(parte_entera_string+"."+parte_decimal_string)
+					self.cantidad_registros_aplicados = int(registro[16:22])
+					parte_entera_string = registro[22:35]
+					parte_decimal_string = registro[35:37]
+					self.monto_no_debitado = float(parte_entera_string+"."+parte_decimal_string)
+					self.cantidad_registros_no_aplicados = int(registro[37:43])
+				else:
+					# Es registro tipo 2
+					if registro[0:1] != '2':
+						raise ValidationError("El registro tipo 2 es incorrecto.")
+					cr = self.env.cr
+					uid = self.env.uid
+					movimiento_line_obj = self.pool.get('financiera.bna.debito.automatico.movimiento.linea')
+					_id = int(registro[72:82])
+					if _id <= 0:
+						raise ValidationError("Error en concepto debito de registro tipo 2.")
+					linea_id = movimiento_line_obj.browse(cr, uid, _id)
+					if linea_id != None and len(linea_id.movimiento_id) > 0 and linea_id.movimiento_id.id != self.id:
+						raise ValidationError("Archivo incorrecto. No existe concepto a debitar.")
+					if registro[41:42] == '0':
+						# Debito aplicado.
+						linea_id.state = 'cobrado'
+						year_string = registro[33:37]
+						month_string = registro[37:39]
+						day_string = registro[39:41]
+						fecha_string = year_string+"-"+month_string+"-"+day_string
+						linea_id.fecha_debito = datetime.strptime(fecha_string, "%Y-%m-%d")
+						linea_id.monto_debitado = linea_id.monto_a_debitar
+					elif registro[41:42] == '9':
+						linea_id.state = 'rechazado'
+						linea_id.descripcion = registro[42:72]
+						linea_id.monto_no_debitado = linea_id.monto_a_debitar
+			i += 1
+		self.write({
+			'state': 'aplicado',
+		})
+
+
+	@api.one
 	def enviar_a_cancelado(self):
 		for cuota_id in self.cuota_ids:
 			cuota_id.bna_debito_disponible = True
 		for movimiento_line_id in self.movimiento_linea_ids:
 			movimiento_line_id.state = 'cancelado'
+			movimiento_line_id.fecha_debito = None
+			movimiento_line_id.monto_debitado = 0
+			movimiento_line_id.monto_no_debitado = 0
+			movimiento_line_id.descripcion = None
 		self.write({
 			'state': 'cancelado',
 		})
@@ -171,12 +248,6 @@ class FinancieraBnaDebitoAutomaticoMovimiento(models.Model):
 				raise ValidationError("La cuota: "+str(cuota_id.name) + "ya no esta disponible para debito por cbu.")
 		self.write({
 			'state': 'generado',
-		})
-
-	@api.one
-	def aplicar_archivo(self):
-		self.write({
-			'state': 'finalizado',
 		})
 
 	@api.onchange('fecha_tope_rendicion')
@@ -214,11 +285,11 @@ class FinancieraBnaDebitoAutomaticoMovimientoCuota(models.Model):
 	monto_debitado = fields.Float('Monto debitado', digits=(16,2))
 	monto_no_debitado = fields.Float('Monto no debitado', digits=(16,2))
 	descripcion = fields.Char('Descripcion del rechazo', size=30)
-	fecha_del_debito = fields.Date('Fecha del debito')
+	fecha_debito = fields.Date('Fecha debito')
 	state = fields.Selection(
 		[('borrador', 'Borrador'),
-		(0, 'Cobrado'),
-		(9, 'Rechazado'),
+		('cobrado', 'Cobrado'),
+		('rechazado', 'Rechazado'),
 		('cancelado', 'Cancelado')],
 		string='Estado', default='borrador')
 	company_id = fields.Many2one('res.company', 'Empresa', required=False, default=lambda self: self.env['res.company']._company_default_get('financiera.bna.debito.automatico.movimiento.linea'))
