@@ -27,7 +27,7 @@
         # 'security/ir.model.access.csv',
         'views/views.xml',
         'views/extends_financiera_prestamo_cuota.xml',
-        'views/templates.xml',
+        'wizards/financiera_bna_cobrar_wizard.xml',
     ],
     # only loaded in demonstration mode
     'demo': [

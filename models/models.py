@@ -50,6 +50,7 @@ class FinancieraBnaDebitoAutomaticoMovimiento(models.Model):
 	archivo_generado = fields.Binary('Archivo generado')
 	archivo_resultado = fields.Binary('Archivo resultado')
 	cuota_fecha_hasta = fields.Date("Fecha hasta")
+	fecha_generacion_archivo = fields.Date("Fecha generacion de archivo")
 	cuota_ids = fields.Many2many('financiera.prestamo.cuota', 'financiera_bna_movimiento_cuota_rel', 'bna_movimiento_id', 'cuota_id', 'Cuotas')
 	movimiento_linea_ids = fields.One2many('financiera.bna.debito.automatico.movimiento.linea','movimiento_id', 'Resultados')
 	monto_debitado = fields.Float('Monto debitado', digits=(16,2))
@@ -115,7 +116,12 @@ class FinancieraBnaDebitoAutomaticoMovimiento(models.Model):
 					raise ValidationError("El Nro de cuenta de la cuota "+str(cuota_id.name)+" no cumple los requerimientos.")
 				# Importe a debitar N(15) 13,2
 				if cuota_id.saldo > 0:
-					registros += str(cuota_id.saldo).replace('.', '').zfill(15)
+					saldo_lista = str(cuota_id.saldo).split(".")
+					entera_string = saldo_lista[0]
+					decimal_string = saldo_lista[1]
+					if len(decimal_string) == 1:
+						decimal_string += "0"
+					registros += (entera_string+decimal_string).zfill(15)
 					total_a_debitar += cuota_id.saldo
 				else:
 					raise ValidationError("El Importe de la cuota "+str(cuota_id.name)+" no cumple los requerimientos.")
@@ -154,7 +160,7 @@ class FinancieraBnaDebitoAutomaticoMovimiento(models.Model):
 		
 		file_read = base64.b64encode(encabezado+registros+finalizar)
 		self.archivo_generado = file_read
-
+		self.fecha_generacion_archivo = datetime.now()
 		self.write({
 			'state': 'generado',
 		})
@@ -169,6 +175,10 @@ class FinancieraBnaDebitoAutomaticoMovimiento(models.Model):
 		if len(registros[len_registros-1]) == 0:
 			del registros[len_registros-1]
 			len_registros -= 1
+		monto_debitado = 0
+		registros_aplicados = 0
+		monto_no_debitado = 0
+		registros_no_aplicados = 0
 		i = 1
 		for registro in registros:
 			if len(registro) != 128:
@@ -215,11 +225,24 @@ class FinancieraBnaDebitoAutomaticoMovimiento(models.Model):
 						fecha_string = year_string+"-"+month_string+"-"+day_string
 						linea_id.fecha_debito = datetime.strptime(fecha_string, "%Y-%m-%d")
 						linea_id.monto_debitado = linea_id.monto_a_debitar
+						monto_debitado += linea_id.monto_a_debitar
+						registros_aplicados += 1
 					elif registro[41:42] == '9':
 						linea_id.state = 'rechazado'
 						linea_id.descripcion = registro[42:72]
 						linea_id.monto_no_debitado = linea_id.monto_a_debitar
+						monto_no_debitado += linea_id.monto_a_debitar
+						registros_no_aplicados += 1
+						linea_id.cuota_id.bna_debito_disponible = True
 			i += 1
+		if round(monto_debitado, 2) != round(self.monto_debitado, 2):
+			raise ValidationError("El monto debitado del registro 3 es inconcistente.")
+		if registros_aplicados != self.cantidad_registros_aplicados:
+			raise ValidationError("La cantidad de registros aplicados del registro 3 es inconcistente.")
+		if round(monto_no_debitado, 2) != round(self.monto_no_debitado, 2):
+			raise ValidationError("El monto no debitado del registro 3 es inconcistente.")
+		if registros_no_aplicados != self.cantidad_registros_no_aplicados:
+			raise ValidationError("La cantidad de registros aplicados del registro 3 es inconcistente.")
 		self.write({
 			'state': 'aplicado',
 		})
@@ -250,6 +273,78 @@ class FinancieraBnaDebitoAutomaticoMovimiento(models.Model):
 			'state': 'generado',
 		})
 
+	@api.multi
+	def wizard_cobrar_movimiento(self):
+		params = {
+			'movimiento_id': self.id,
+			'payment_amount': self.monto_debitado,
+			'payment_date': self.fecha_generacion_archivo,
+			'currency_id': self.env.user.company_id.currency_id.id,
+		}
+		view_id = self.env['financiera.bna.cobrar.wizard']
+		new = view_id.create(params)
+		domain = []
+		context = dict(self._context or {})
+		current_uid = context.get('uid')
+		current_user = self.env['res.users'].browse(current_uid)
+		for journal_id in current_user.entidad_login_id.journal_disponibles_ids:
+			if journal_id.type in ('cash', 'bank'):
+				domain.append(journal_id.id)
+		context = {'domain': domain}
+		return {
+			'type': 'ir.actions.act_window',
+			'name': 'Pagar prestamo',
+			'res_model': 'financiera.bna.cobrar.wizard',
+			'view_type': 'form',
+			'view_mode': 'form',
+			'res_id': new.id,
+			'view_id': self.env.ref('financiera_bna_debito_automatico.bna_cobrar_wizard', False).id,
+			'target': 'new',
+			'context': context,
+		}
+
+	@api.one
+	def confirmar_cobrar_movimiento(self, payment_date, journal_id,
+			invoice, invoice_date, factura_electronica,
+			punitorio_invoice, punitorio_invoice_date, punitorio_factura_electronica):
+		if invoice:
+			fpcmf_values = {
+				'invoice_type': 'interes',
+				'company_id': self.company_id.id,
+			}
+			multi_factura_id = self.env['financiera.prestamo.cuota.multi.factura'].create(fpcmf_values)
+		if punitorio_invoice:
+			fpcmf_values = {
+				'invoice_type': 'punitorio',
+				'company_id': self.company_id.id,
+			}
+			multi_factura_punitorio_id = self.env['financiera.prestamo.cuota.multi.factura'].create(fpcmf_values)
+		for linea_id in self.movimiento_linea_ids:
+			if linea_id.state == 'cobrado':
+				cuota_id = linea_id.cuota_id
+				partner_id = cuota_id.partner_id
+				fpcmc_values = {
+					'partner_id': partner_id.id,
+					'company_id': self.company_id.id,
+				}
+				multi_cobro_id = self.env['financiera.prestamo.cuota.multi.cobro'].create(fpcmc_values)
+				partner_id.multi_cobro_ids = [multi_cobro_id.id]
+				cuota_id.confirmar_cobrar_cuota(payment_date, journal_id, linea_id.monto_debitado, multi_cobro_id)
+				# Facturacion cuota
+				if invoice:
+					if not cuota_id.facturada:
+						cuota_id.facturar_cuota(invoice_date, factura_electronica, multi_factura_id, multi_cobro_id)
+				if cuota_id.punitorio_a_facturar > 0:
+					cuota_id.facturar_punitorio_cuota(punitorio_invoice_date, punitorio_factura_electronica, multi_factura_punitorio_id, multi_cobro_id)
+		if multi_factura_id.invoice_amount == 0:
+			multi_factura_id.unlink()
+		if multi_factura_punitorio_id.invoice_amount == 0:
+			multi_factura_punitorio_id.unlink()
+		self.write({
+			'state': 'finalizado',
+		})
+
+
 	@api.onchange('fecha_tope_rendicion')
 	def _onchange_fecha_tope_rendicion(self):
 		if self.fecha_tope_rendicion != False:
@@ -268,7 +363,7 @@ class FinancieraBnaDebitoAutomaticoMovimiento(models.Model):
 			uid = self.env.uid
 			movimiento_obj = self.pool.get('financiera.bna.debito.automatico.movimiento')
 			movimiento_ids = movimiento_obj.search(cr, uid, [
-				('state', '=', 'generado'),
+				('state', 'in', ('generado', 'aplicado', 'finalizado')),
 				('fecha_tope_rendicion', '>=', string_fecha_inicio_mes),
 				('fecha_tope_rendicion', '<', string_fecha_inicio_mes_siguiente),
 				('company_id', '=', self.company_id.id)])

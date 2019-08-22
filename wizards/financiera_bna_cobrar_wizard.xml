@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<odoo>
+
+    <!-- Seleccionar Plan -->
+
+    <record id="bna_cobrar_wizard" model="ir.ui.view">
+        <field name="name">financiera.bna.cobrar.wizard</field>
+        <field name="model">financiera.bna.cobrar.wizard</field>
+        <field name="arch" type="xml">
+          <form string="Movimientos de debito automatico">
+            <sheet>
+              <group>
+                <field name="payment_date" readonly="1"/>
+                <field name="currency_id" readonly="1"/>
+                <field name="journal_id" domain="[('id', 'in', domain)]" required="1"/>
+                <field name="payment_amount" widget="monetary" readonly="1" options="{'currency_field': 'currency_id'}"/>
+                <field name="factura_obligatoria" invisible="1"/>
+              </group>
+              <group string="Facturacion cuota" groups="financiera_prestamos.user">
+                  <field name="invoice" attrs="{'readonly': [('factura_obligatoria', '=', True)]}"/>
+                  <field name="invoice_date" attrs="{'invisible': [('invoice', '=', False)], 'required': [('invoice', '=', True)]}"/>
+                  <field name="factura_electronica" attrs="{'invisible': [('invoice', '=', False)]}"/>
+              </group>
+              <group string="Facturacion punitorios" groups="financiera_prestamos.user">
+                  <field name="punitorio_invoice" attrs="{'readonly': [('factura_obligatoria', '=', True)]}"/>
+                  <field name="punitorio_invoice_date" attrs="{'invisible': [('punitorio_invoice', '=', False)], 'required': [('punitorio_invoice', '=', True)]}"/>
+                  <field name="punitorio_factura_electronica" attrs="{'invisible': [('punitorio_invoice', '=', False)]}"/>
+              </group>
+            </sheet>
+            <footer>
+              <button name="confirmar_cobrar_movimiento" string="Cobrar debitos" type="object" class="btn-primary"/>
+              <button string="Cancel" class="btn-default" special="cancel"/>   
+            </footer>
+          </form>
+        </field>
+    </record>
+
+</odoo>
