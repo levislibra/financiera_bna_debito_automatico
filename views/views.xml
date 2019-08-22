@@ -79,8 +79,8 @@
             <button name="generar_archivo" states="borrador" string="Generar archivo" type="object" class="oe_highlight"/>
             <button name="enviar_a_cancelado" states="generado,aplicado" string="Cancelar" type="object"/>
             <button name="enviar_a_generado" states="cancelado" string="Recuperar" type="object"/>
-            <button name="aplicar_archivo"  string="Aplicar archivo" type="object" class="oe_highlight"/>
-            <button name="wizard_cobrar_movimiento"  string="Cobrar debitos" type="object" class="oe_highlight"/>
+            <button name="aplicar_archivo" string="Aplicar archivo" states="generado" type="object" class="oe_highlight"/>
+            <button name="wizard_cobrar_movimiento" string="Cobrar debitos" states="aplicado" type="object" class="oe_highlight"/>
             <field name="state" widget="statusbar"/>
           </header>
           <sheet>
