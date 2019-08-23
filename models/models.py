@@ -11,6 +11,7 @@ class FinancieraBnaDebitoAutomaticoConfiguracion(models.Model):
 
 	name = fields.Char('Nombre', compute='_compute_name')
 	sucursal_bna_recaudacion = fields.Char("Sucursal de la cuenta de recaudacion (4 digitos)", size=4)
+	active = fields.Boolean("Activa", default=True)
 	tipo_moneda_cuenta = fields.Selection(
 		[(10, 'Cuenta Corriente $'), (11, 'Cuenta Corriente u$s'),
 		(20, 'Caja de Ahorro $'), (21, 'Caja de Ahorro u$s'),
@@ -49,7 +50,7 @@ class FinancieraBnaDebitoAutomaticoMovimiento(models.Model):
 	nro_archivo_enviado_mes = fields.Char('Nro de archivo que se envia en el mes', help='Comenzando desde 01', size=2)
 	archivo_generado = fields.Binary('Archivo generado')
 	archivo_resultado = fields.Binary('Archivo resultado')
-	cuota_fecha_hasta = fields.Date("Fecha hasta")
+	cuota_fecha_hasta = fields.Date("Fecha vencimiento cuota hasta")
 	fecha_generacion_archivo = fields.Date("Fecha generacion de archivo")
 	cuota_ids = fields.Many2many('financiera.prestamo.cuota', 'financiera_bna_movimiento_cuota_rel', 'bna_movimiento_id', 'cuota_id', 'Cuotas')
 	movimiento_linea_ids = fields.One2many('financiera.bna.debito.automatico.movimiento.linea','movimiento_id', 'Resultados')
@@ -102,16 +103,24 @@ class FinancieraBnaDebitoAutomaticoMovimiento(models.Model):
 			if cuota_id.bna_debito_disponible:
 				cuota_id.bna_debito_disponible = False
 				registros += "2" 
-				if cuota_id.debito_automatico_cuota_cbu.sucursal != False and len(cuota_id.debito_automatico_cuota_cbu.sucursal) == 4:
-					registros += cuota_id.debito_automatico_cuota_cbu.sucursal
+				if cuota_id.debito_automatico_cuota_cbu.sucursal != False:
+					sucursal = cuota_id.debito_automatico_cuota_cbu.sucursal.zfill(4)
+					if len(sucursal) == 4:
+						registros += sucursal
+					else:
+						raise ValidationError("Cuota "+str(cuota_id.name)+". La sucursal del banco no cumple los requerimientos.")
 				else:
 					raise ValidationError("Cuota "+str(cuota_id.name)+". La sucursal del banco no cumple los requerimientos.")
 				# Hardcore CA - Supuestamente siempre sera CA: Caja de Ahorro
 				registros += "CA"
 				# Cuenta a debitar primera posicion 0 y N(10) para Nro de cuenta del cliente
 				registros += "0"
-				if cuota_id.debito_automatico_cuota_cbu.acc_number != False and len(cuota_id.debito_automatico_cuota_cbu.acc_number) == 10:
-					registros += cuota_id.debito_automatico_cuota_cbu.acc_number
+				if cuota_id.debito_automatico_cuota_cbu.acc_number != False:
+					acc_number = cuota_id.debito_automatico_cuota_cbu.acc_number.zfill(10)
+					if len(acc_number) == 10:
+						registros += acc_number
+					else:
+						raise ValidationError("El Nro de cuenta de la cuota "+str(cuota_id.name)+" no cumple los requerimientos.")
 				else:
 					raise ValidationError("El Nro de cuenta de la cuota "+str(cuota_id.name)+" no cumple los requerimientos.")
 				# Importe a debitar N(15) 13,2
@@ -147,7 +156,12 @@ class FinancieraBnaDebitoAutomaticoMovimiento(models.Model):
 		# Un Registro tipo 3
 		finalizar = "3"
 		# Importe total a debitar N(15) 13,2
-		finalizar += str(total_a_debitar).replace('.', '').zfill(15)
+		saldo_lista = str(total_a_debitar).split(".")
+		entera_string = saldo_lista[0]
+		decimal_string = saldo_lista[1]
+		if len(decimal_string) == 1:
+			decimal_string += "0"
+		finalizar += (entera_string+decimal_string).zfill(15)
 		# Cantidad de registros tipo 2 que se envian N(6)
 		finalizar += str(len(self.cuota_ids)).zfill(6)
 		# Empresa envia 0 N(15) - BNA devuelve monto no aplicado
@@ -223,6 +237,8 @@ class FinancieraBnaDebitoAutomaticoMovimiento(models.Model):
 						month_string = registro[37:39]
 						day_string = registro[39:41]
 						fecha_string = year_string+"-"+month_string+"-"+day_string
+						if int(year_string) <= 0 or int(month_string) <= 0 or int(day_string) <= 0:
+							raise ValidationError("Fecha de cobro incorrecta en registro tipo 2.")
 						linea_id.fecha_debito = datetime.strptime(fecha_string, "%Y-%m-%d")
 						linea_id.monto_debitado = linea_id.monto_a_debitar
 						monto_debitado += linea_id.monto_a_debitar

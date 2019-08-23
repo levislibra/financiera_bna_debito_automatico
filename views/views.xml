@@ -9,10 +9,20 @@
       <field name="arch" type="xml">
         <tree>
           <field name="name"/>
+          <field name="company_id" groups="base.group_erp_manager"/>
         </tree>
       </field>
     </record>
 
+    <record model="ir.ui.view" id="filter_bna_configuracion_view">
+      <field name="name">financiera.bna.debito.automatico.configuracion.filter</field>
+      <field name="model">financiera.bna.debito.automatico.configuracion</field>
+      <field name="arch" type="xml">
+        <search>
+          <filter string="Inactivas" name="inactivas" domain="[('active', '=', False)]"/>
+        </search>
+      </field>
+    </record>
 
     <record model="ir.ui.view" id="configuracion_form">
       <field name="name">financiera.bna.debito.automatico.configuracion form</field>
@@ -20,9 +30,15 @@
       <field name="arch" type="xml">
         <form>
           <sheet>
+            <div class="oe_button_box" name="button_box">
+                <button name="toggle_active" type="object" class="oe_stat_button" icon="fa-check">
+                    <field name="active" widget="boolean_button" options="{&quot;terminology&quot;: &quot;active&quot;}"/>
+                </button>
+            </div>
             <group>
               <field name="company_id" groups="base.group_erp_manager"/>
               <field name="name"/>
+              <!-- <field name="active"/> -->
               <field name="sucursal_bna_recaudacion" required="1"/>
               <field name="tipo_moneda_cuenta" required="1"/>
               <field name="cuenta_bna_recaudacion" required="1"/>
@@ -54,6 +70,7 @@
           <field name="moneda_movimiento"/>
           <field name="fecha_tope_rendicion"/>
           <field name="state"/>
+          <field name="company_id" groups="base.group_erp_manager"/>
         </tree>
       </field>
     </record>
@@ -159,7 +176,7 @@
     
     <!-- Top menu item -->
     
-    <menuitem name="BNA Debito Automatico" id="menu_cobros" web_icon="financiera_bna_debito_automatico,static/description/icon.png"/> <!-- groups="financiera_prestamos.user" -->
+    <menuitem name="BNA Debito Automatico" id="menu_cobros" web_icon="financiera_bna_debito_automatico,static/description/icon.png" groups="financiera_bna_debito_automatico.user"/>
     
     <!-- menu categories -->
 
@@ -170,7 +187,7 @@
 
     <menuitem name="Movimientos" id="menu_movimientos_action" parent="menu_bna_movimientos" action="movimiento_action" sequence="0"/>
     
-    <menuitem name="Configuracion" id="menu_configuracion_action" parent="menu_bna_configuracion" action="configuracion_action" sequence="0"/>
+    <menuitem name="Cuentas Recaudacion" id="menu_configuracion_action" parent="menu_bna_configuracion" action="configuracion_action" sequence="0"/>
 
   </data>
 </openerp>
