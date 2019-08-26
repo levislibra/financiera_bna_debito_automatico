@@ -49,6 +49,7 @@ class FinancieraBnaDebitoAutomaticoMovimiento(models.Model):
 	mes_tope_rendicion = fields.Char('Mes fecha tope de rendicion', help='Con formato MM', size=2)
 	nro_archivo_enviado_mes = fields.Char('Nro de archivo que se envia en el mes', help='Comenzando desde 01', size=2)
 	archivo_generado = fields.Binary('Archivo generado')
+	archivo_generado_nombre = fields.Char('Nombre de archivo', compute='_compute_archivo_generado_nombre')
 	archivo_resultado = fields.Binary('Archivo resultado')
 	cuota_fecha_hasta = fields.Date("Fecha vencimiento cuota hasta")
 	fecha_generacion_archivo = fields.Date("Fecha generacion de archivo")
@@ -64,6 +65,10 @@ class FinancieraBnaDebitoAutomaticoMovimiento(models.Model):
 	@api.one
 	def _compute_name(self):
 		self.name = 'Mes '+self.mes_tope_rendicion+' - Archivo '+self.nro_archivo_enviado_mes
+
+	@api.one
+	def _compute_archivo_generado_nombre(self):
+		self.archivo_generado_nombre = 'DebitarBNA-Mes'+self.mes_tope_rendicion+'-Archivo'+self.nro_archivo_enviado_mes+'.txt'
 
 	@api.one
 	def asignar_cuotas(self):

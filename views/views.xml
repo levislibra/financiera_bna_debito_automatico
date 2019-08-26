@@ -109,7 +109,7 @@
                 <field name="fecha_tope_rendicion" attrs="{'readonly': [('state', '!=', 'borrador')]}" required="1"/>
                 <field name="mes_tope_rendicion" attrs="{'readonly': [('state', '!=', 'borrador')]}" required="1"/>
                 <field name="nro_archivo_enviado_mes" attrs="{'readonly': [('state', '!=', 'borrador')]}" required="1"/>
-                <field name="archivo_generado" readonly="1"/>
+                <field name="archivo_generado" filename="archivo_generado_nombre" readonly="1"/>
                 <field name="fecha_generacion_archivo" readonly="1"/>
               </group>
               <group>
