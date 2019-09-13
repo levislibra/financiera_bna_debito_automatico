@@ -99,7 +99,7 @@ class FinancieraBnaDebitoAutomaticoMovimiento(models.Model):
 		encabezado += str(fecha_tope_rendicion.month).zfill(2)
 		encabezado += str(fecha_tope_rendicion.day).zfill(2)
 		encabezado += str(self.empleados_bna)
-		encabezado += "".ljust(94)
+		encabezado += "".ljust(94, ' ')
 		encabezado += "\n"
 		# Escribimos los registro tipo 2
 		registros = ""
@@ -154,7 +154,7 @@ class FinancieraBnaDebitoAutomaticoMovimiento(models.Model):
 				new_movimiento_linea_id = self.env['financiera.bna.debito.automatico.movimiento.linea'].create(ml_values)
 				self.movimiento_linea_ids = [new_movimiento_linea_id.id]
 				registros += str(new_movimiento_linea_id.id).zfill(10)
-				registros += "".ljust(46)
+				registros += "".ljust(46, ' ')
 				registros += "\n"
 			else:
 				raise ValidationError("La cuota: "+str(cuota_id.name) + " no esta disponible para debito por cbu.")
@@ -174,7 +174,7 @@ class FinancieraBnaDebitoAutomaticoMovimiento(models.Model):
 		# Empresa envia 0 N(6) - BNA cant de reg. no aplicados
 		finalizar += "0".zfill(6)
 		# Agregamos blancos para cumplicar con los 128 bit a enviar
-		finalizar += "".ljust(85)
+		finalizar += "".ljust(85, ' ')
 		finalizar += "\n"
 		
 		file_read = base64.b64encode(encabezado+registros+finalizar)
@@ -409,6 +409,34 @@ class FinancieraBnaDebitoAutomaticoMovimientoCuota(models.Model):
 		('cancelado', 'Cancelado')],
 		string='Estado', default='borrador')
 	company_id = fields.Many2one('res.company', 'Empresa', required=False, default=lambda self: self.env['res.company']._company_default_get('financiera.bna.debito.automatico.movimiento.linea'))
+
+class ExtendsFinancieraPrestamo(models.Model):
+	_name = 'financiera.prestamo'
+	_inherit = 'financiera.prestamo'
+
+	barrido_cbu_bna = fields.Boolean('Barrido por CBU Banco Nacion mediante archivo', compute='_compute_barrido_cbu_bna')
+	debito_automatico_cuota = fields.Boolean('Barrido por CBU Banco Nacion', default=False)
+	debito_automatico_cuota_cbu = fields.Many2one('res.partner.bank', 'CBU')
+
+	@api.one
+	def _compute_barrido_cbu_bna(self):
+		self.barrido_cbu_bna = self.env.user.company_id.barrido_cbu_bna
+
+	@api.onchange('debito_automatico_cuota')
+	def _onchange_debito_automatico_cuota(self):
+		for cuota_id in self.cuota_ids:
+			cuota_id.debito_automatico_cuota = self.debito_automatico_cuota
+		if self.debito_automatico_cuota:
+			# Inabilitamos medios de pago incompatibles
+			self.pagos360_pago_voluntario = False
+		else:
+			self.debito_automatico_cuota_cbu = False
+
+	@api.onchange('debito_automatico_cuota_cbu')
+	def _onchange_debito_automatico_cuota_cbu(self):
+		for cuota_id in self.cuota_ids:
+			cuota_id.debito_automatico_cuota_cbu = self.debito_automatico_cuota_cbu
+			cuota_id.debito_bank_id = self.debito_automatico_cuota_cbu.bank_id.id
 
 
 class ExtendsFinancieraPrestamoCuota(models.Model):

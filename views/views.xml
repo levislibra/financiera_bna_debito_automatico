@@ -173,7 +173,44 @@
         (0, 0, {'view_mode': 'tree', 'view_id': ref('movimiento_tree')}), 
         (0, 0, {'view_mode': 'form', 'view_id': ref('movimiento_form')})]"/>
     </record>
-    
+
+    <!-- Prestamo inherit -->
+
+    <record id="prestamo_form_inherited"  model="ir.ui.view">
+      <field name="name">Extension Prestamo Form</field>
+      <field name="model">financiera.prestamo</field>
+      <field name="inherit_id" ref="financiera_prestamos.financiera_prestamo_form"/>
+      <field name="arch" type="xml">        
+        <xpath expr="//field[@name='pago_voluntario_entidad']" position='after'>
+          <field name="barrido_cbu_bna" invisible="1"/>
+          <label for="debito_automatico_cuota" string="Barrido por CBU Banco Nacion"/>
+          <div class="address_format">
+            <field name="debito_automatico_cuota" attrs="{'readonly': [('barrido_cbu_bna', '=', False)]}" nolabel="1" style="width: 20%"/>
+            <field name="debito_automatico_cuota_cbu" nolabel="1" options="{'no_quick_create':True,'no_create_edit':True,'no_open':True}" domain="[('partner_id', '=', partner_id)]" attrs="{'invisible': [('debito_automatico_cuota', '=', False)], 'required': [('debito_automatico_cuota', '=', True)]}" style="width: 80%"/>
+          </div>
+        </xpath>
+      </field>
+    </record>
+
+
+    <!-- Cuota inherit -->
+
+<!--     <record id="comision_prestamo_cuota_form_inherited"  model="ir.ui.view">
+      <field name="name">Extension Cuota Form</field>
+      <field name="model">financiera.prestamo.cuota</field>
+      <field name="inherit_id" ref="financiera_prestamos.financiera_prestamo_cuota_form"/>
+      <field name="arch" type="xml">        
+        <xpath expr="//page[3]" position='after'>
+          <page string="Comisiones" groups="financiera_comision.manager">
+            <group>
+              <field name="comisiones_ids"/>
+              <field name="invoice_comisiones_ids"/>
+            </group>
+          </page>
+        </xpath>
+      </field>
+    </record>
+ -->    
     <!-- Top menu item -->
     
     <menuitem name="BNA Debito Automatico" id="menu_cobros" web_icon="financiera_bna_debito_automatico,static/description/icon.png" groups="financiera_bna_debito_automatico.user"/>
