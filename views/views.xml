@@ -184,9 +184,9 @@
         <xpath expr="//field[@name='pago_voluntario_entidad']" position='after'>
           <field name="barrido_cbu_bna" invisible="1"/>
           <label for="debito_automatico_cuota" string="Barrido por CBU Banco Nacion"/>
-          <div class="address_format">
+          <div class="oe_left address_format">
             <field name="debito_automatico_cuota" attrs="{'readonly': [('barrido_cbu_bna', '=', False)]}" nolabel="1" style="width: 20%"/>
-            <field name="debito_automatico_cuota_cbu" nolabel="1" options="{'no_quick_create':True,'no_create_edit':True,'no_open':True}" domain="[('partner_id', '=', partner_id)]" attrs="{'invisible': [('debito_automatico_cuota', '=', False)], 'required': [('debito_automatico_cuota', '=', True)]}" style="width: 80%"/>
+            <field name="debito_automatico_cuota_cbu" nolabel="1" options="{'no_quick_create':True,'no_create_edit':True,'no_open':True}" domain="[('partner_id', '=', partner_id)]" attrs="{'invisible': [('debito_automatico_cuota', '=', False)], 'required': [('debito_automatico_cuota', '=', True)]}" style="width: 75%"/>
           </div>
         </xpath>
       </field>
