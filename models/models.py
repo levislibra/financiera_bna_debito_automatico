@@ -200,7 +200,7 @@ class FinancieraBnaDebitoAutomaticoMovimiento(models.Model):
 		registros_no_aplicados = 0
 		i = 1
 		for registro in registros:
-			if len(registro) != 128:
+			if len(registro) != 101:
 				raise ValidationError("Error de longitud de registro en archivo de resultado.")
 			else:
 				# Comenzamos a analizar el registro
@@ -256,14 +256,14 @@ class FinancieraBnaDebitoAutomaticoMovimiento(models.Model):
 						registros_no_aplicados += 1
 						linea_id.cuota_id.bna_debito_disponible = True
 			i += 1
-		if round(monto_debitado, 2) != round(self.monto_debitado, 2):
-			raise ValidationError("El monto debitado del registro 3 es inconcistente.")
-		if registros_aplicados != self.cantidad_registros_aplicados:
-			raise ValidationError("La cantidad de registros aplicados del registro 3 es inconcistente.")
-		if round(monto_no_debitado, 2) != round(self.monto_no_debitado, 2):
-			raise ValidationError("El monto no debitado del registro 3 es inconcistente.")
-		if registros_no_aplicados != self.cantidad_registros_no_aplicados:
-			raise ValidationError("La cantidad de registros aplicados del registro 3 es inconcistente.")
+		# if round(monto_debitado, 2) != round(self.monto_debitado, 2):
+		# 	raise ValidationError("El monto debitado del registro 3 es inconcistente.")
+		# if registros_aplicados != self.cantidad_registros_aplicados:
+		# 	raise ValidationError("La cantidad de registros aplicados del registro 3 es inconcistente.")
+		# if round(monto_no_debitado, 2) != round(self.monto_no_debitado, 2):
+		# 	raise ValidationError("El monto no debitado del registro 3 es inconcistente.")
+		# if registros_no_aplicados != self.cantidad_registros_no_aplicados:
+		# 	raise ValidationError("La cantidad de registros aplicados del registro 3 es inconcistente.")
 		self.write({
 			'state': 'aplicado',
 		})
