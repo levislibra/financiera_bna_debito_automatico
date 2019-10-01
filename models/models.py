@@ -100,7 +100,7 @@ class FinancieraBnaDebitoAutomaticoMovimiento(models.Model):
 		encabezado += str(fecha_tope_rendicion.day).zfill(2)
 		encabezado += str(self.empleados_bna)
 		encabezado += "".ljust(94, ' ')
-		encabezado += "\n"
+		encabezado += "\r\n"
 		# Escribimos los registro tipo 2
 		registros = ""
 		total_a_debitar = 0
@@ -155,7 +155,7 @@ class FinancieraBnaDebitoAutomaticoMovimiento(models.Model):
 				self.movimiento_linea_ids = [new_movimiento_linea_id.id]
 				registros += str(new_movimiento_linea_id.id).zfill(10)
 				registros += "".ljust(46, ' ')
-				registros += "\n"
+				registros += "\r\n"
 			else:
 				raise ValidationError("La cuota: "+str(cuota_id.name) + " no esta disponible para debito por cbu.")
 		# Un Registro tipo 3
@@ -175,7 +175,7 @@ class FinancieraBnaDebitoAutomaticoMovimiento(models.Model):
 		finalizar += "0".zfill(6)
 		# Agregamos blancos para cumplicar con los 128 bit a enviar
 		finalizar += "".ljust(85, ' ')
-		finalizar += "\n"
+		finalizar += "\r\n"
 		
 		file_read = base64.b64encode(encabezado+registros+finalizar)
 		self.archivo_generado = file_read
