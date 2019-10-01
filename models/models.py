@@ -397,6 +397,8 @@ class FinancieraBnaDebitoAutomaticoMovimientoCuota(models.Model):
 	_rec = 'cuota_id'
 	movimiento_id = fields.Many2one('financiera.bna.debito.automatico.movimiento', 'Movimiento de debito automatico')
 	cuota_id = fields.Many2one('financiera.prestamo.cuota', 'Cuota')
+	partner_id = fields.Many2one('res.partner', 'Cliente', related='cuota_id.partner_id')
+	prestamo_id = fields.Many2one('financiera.prestamo', 'Prestamo', related='cuota_id.prestamo_id')
 	monto_a_debitar = fields.Float('Monto a debitar', digits=(16,2))
 	monto_debitado = fields.Float('Monto debitado', digits=(16,2))
 	monto_no_debitado = fields.Float('Monto no debitado', digits=(16,2))
