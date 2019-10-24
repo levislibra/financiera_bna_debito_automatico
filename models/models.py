@@ -216,12 +216,16 @@ class FinancieraBnaDebitoAutomaticoMovimiento(models.Model):
 						raise ValidationError("El registro tipo 3 es incorrecto.")
 					parte_entera_string = registro[1:14]
 					parte_decimal_string = registro[14:16]
-					self.monto_debitado = float(parte_entera_string+"."+parte_decimal_string)
-					self.cantidad_registros_aplicados = int(registro[16:22])
+					# self.monto_debitado = float(parte_entera_string+"."+parte_decimal_string)
+					self.monto_debitado = monto_debitado
+					# self.cantidad_registros_aplicados = int(registro[16:22])
+					self.cantidad_registros_aplicados = registros_aplicados
 					parte_entera_string = registro[22:35]
 					parte_decimal_string = registro[35:37]
-					self.monto_no_debitado = float(parte_entera_string+"."+parte_decimal_string)
-					self.cantidad_registros_no_aplicados = int(registro[37:43])
+					# self.monto_no_debitado = float(parte_entera_string+"."+parte_decimal_string)
+					self.monto_no_debitado = monto_no_debitado
+					# self.cantidad_registros_no_aplicados = int(registro[37:43])
+					self.cantidad_registros_no_aplicados = registros_no_aplicados
 				else:
 					# Es registro tipo 2
 					if registro[0:1] != '2':
