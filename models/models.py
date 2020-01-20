@@ -106,56 +106,65 @@ class FinancieraBnaDebitoAutomaticoMovimiento(models.Model):
 		total_a_debitar = 0
 		for cuota_id in self.cuota_ids:
 			if cuota_id.bna_debito_disponible:
-				cuota_id.bna_debito_disponible = False
-				registros += "2" 
-				if cuota_id.debito_automatico_cuota_cbu.sucursal != False:
-					sucursal = cuota_id.debito_automatico_cuota_cbu.sucursal.zfill(4)
-					if len(sucursal) == 4:
-						registros += sucursal
+				saldo_cuota_a_debitar = cuota_id.saldo
+				while saldo_cuota_a_debitar > 0:
+					cuota_id.bna_debito_disponible = False
+					registros += "2"
+					if cuota_id.debito_automatico_cuota_cbu.sucursal != False:
+						sucursal = cuota_id.debito_automatico_cuota_cbu.sucursal.zfill(4)
+						if len(sucursal) == 4:
+							registros += sucursal
+						else:
+							raise ValidationError("Cuota "+str(cuota_id.name)+". La sucursal del banco no cumple los requerimientos.")
 					else:
 						raise ValidationError("Cuota "+str(cuota_id.name)+". La sucursal del banco no cumple los requerimientos.")
-				else:
-					raise ValidationError("Cuota "+str(cuota_id.name)+". La sucursal del banco no cumple los requerimientos.")
-				# Hardcore CA - Supuestamente siempre sera CA: Caja de Ahorro
-				registros += "CA"
-				# Cuenta a debitar primera posicion 0 y N(10) para Nro de cuenta del cliente
-				registros += "0"
-				if cuota_id.debito_automatico_cuota_cbu.acc_number != False:
-					acc_number = cuota_id.debito_automatico_cuota_cbu.acc_number.zfill(10)
-					if len(acc_number) == 10:
-						registros += acc_number
+					# Hardcore CA - Supuestamente siempre sera CA: Caja de Ahorro
+					registros += "CA"
+					# Cuenta a debitar primera posicion 0 y N(10) para Nro de cuenta del cliente
+					registros += "0"
+					if cuota_id.debito_automatico_cuota_cbu.acc_number != False:
+						acc_number = cuota_id.debito_automatico_cuota_cbu.acc_number.zfill(10)
+						if len(acc_number) == 10:
+							registros += acc_number
+						else:
+							raise ValidationError("El Nro de cuenta de la cuota "+str(cuota_id.name)+" no cumple los requerimientos.")
 					else:
 						raise ValidationError("El Nro de cuenta de la cuota "+str(cuota_id.name)+" no cumple los requerimientos.")
-				else:
-					raise ValidationError("El Nro de cuenta de la cuota "+str(cuota_id.name)+" no cumple los requerimientos.")
-				# Importe a debitar N(15) 13,2
-				if cuota_id.saldo > 0:
-					saldo_lista = str(cuota_id.saldo).split(".")
-					entera_string = saldo_lista[0]
-					decimal_string = saldo_lista[1]
-					if len(decimal_string) == 1:
-						decimal_string += "0"
-					registros += (entera_string+decimal_string).zfill(15)
-					total_a_debitar += cuota_id.saldo
-				else:
-					raise ValidationError("El Importe de la cuota "+str(cuota_id.name)+" no cumple los requerimientos.")
-				# Empresa envia 0 N(8) - BNA devuelve fecha de cobro
-				registros += "00000000"
-				# Empresa envia 0 N(1) - BNA devuelve 0 si aplicado
-				# 9 si fue rechazado
-				registros += "0"
-				# Empresa envia blancos N(30)
-				registros += "                              "
-				# Empresa campo N(10) de uso interno
-				ml_values = {
-					'cuota_id': cuota_id.id,
-					'monto_a_debitar': cuota_id.saldo,
-				}
-				new_movimiento_linea_id = self.env['financiera.bna.debito.automatico.movimiento.linea'].create(ml_values)
-				self.movimiento_linea_ids = [new_movimiento_linea_id.id]
-				registros += str(new_movimiento_linea_id.id).zfill(10)
-				registros += "".ljust(46, ' ')
-				registros += "\r\n"
+					# Importe a debitar N(15) 13,2
+					monto_a_debitar = saldo_cuota_a_debitar
+					if cuota_id.bna_debito_partes > 0:
+						monto_a_debitar = min(cuota_id.bna_debito_partes, saldo_cuota_a_debitar)
+					saldo_cuota_a_debitar -= monto_a_debitar
+					if monto_a_debitar > 0:
+						saldo_lista = str(monto_a_debitar).split(".")
+						print(monto_a_debitar)
+						print("MONTO A DEBITAR:: ")
+						print(saldo_lista)
+						entera_string = saldo_lista[0]
+						decimal_string = saldo_lista[1]
+						if len(decimal_string) == 1:
+							decimal_string += "0"
+						registros += (entera_string+decimal_string).zfill(15)
+						total_a_debitar += monto_a_debitar
+					else:
+						raise ValidationError("El Importe de la cuota "+str(cuota_id.name)+" no cumple los requerimientos.")
+					# Empresa envia 0 N(8) - BNA devuelve fecha de cobro
+					registros += "00000000"
+					# Empresa envia 0 N(1) - BNA devuelve 0 si aplicado
+					# 9 si fue rechazado
+					registros += "0"
+					# Empresa envia blancos N(30)
+					registros += "                              "
+					# Empresa campo N(10) de uso interno
+					ml_values = {
+						'cuota_id': cuota_id.id,
+						'monto_a_debitar': monto_a_debitar,
+					}
+					new_movimiento_linea_id = self.env['financiera.bna.debito.automatico.movimiento.linea'].create(ml_values)
+					self.movimiento_linea_ids = [new_movimiento_linea_id.id]
+					registros += str(new_movimiento_linea_id.id).zfill(10)
+					registros += "".ljust(46, ' ')
+					registros += "\r\n"
 			else:
 				raise ValidationError("La cuota: "+str(cuota_id.name) + " no esta disponible para debito por cbu.")
 		# Un Registro tipo 3
@@ -452,5 +461,5 @@ class ExtendsFinancieraPrestamoCuota(models.Model):
 	bna_movimiento_ids = fields.Many2many('financiera.bna.debito.automatico.movimiento', 'financiera_bna_movimiento_cuota_rel', 'cuota_id', 'bna_movimiento_id', 'BNA debitos')
 	bna_debito_automatico_linea_ids = fields.One2many('financiera.bna.debito.automatico.movimiento.linea', 'cuota_id', 'BNA resultados de debitos')
 	bna_debito_disponible = fields.Boolean('Disponible para debito BNA?', default=True)
-
+	bna_debito_partes = fields.Float('Debitar en partes de', default=-1.00)
 

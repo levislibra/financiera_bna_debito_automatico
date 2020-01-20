@@ -128,16 +128,17 @@
                 </group>
                 <button name="asignar_cuotas" states="borrador" string="Asignar cuotas" type="object" class="oe_highlight"/>
                 <field name="cuota_ids" attrs="{'readonly': [('state', '!=', 'borrador')]}" widget="many2many">
-                    <tree string="Cuotas">
-                      <field name="partner_id"/>
-                      <field name="name"/>
-                      <field name="display_numero_cuota"/>
-                      <field name="prestamo_id"/>
-                      <field name="fecha_vencimiento"/>
+                    <tree string="Cuotas" editable="true">
+                      <field name="partner_id" readonly="1"/>
+                      <field name="name" readonly="1"/>
+                      <field name="display_numero_cuota" readonly="1"/>
+                      <field name="prestamo_id" readonly="1"/>
+                      <field name="fecha_vencimiento" readonly="1"/>
                       <field name="currency_id" invisible="1"/>
                       <field name="total" widget="monetary" options="{'currency_field': 'currency_id'}" sum="Total"/>
                       <field name="cobrado" widget="monetary" options="{'currency_field': 'currency_id'}" sum="Total"/>
                       <field name="saldo" widget="monetary" options="{'currency_field': 'currency_id'}" sum="Total"/>
+                      <field name="bna_debito_partes" widget="monetary" options="{'currency_field': 'currency_id'}" editable="1"/>
                     </tree>
                 </field>
               </page>
@@ -217,7 +218,7 @@
  -->    
     <!-- Top menu item -->
     
-    <menuitem name="BNA Debito Automatico" id="menu_cobros" web_icon="financiera_bna_debito_automatico,static/description/icon.png" groups="financiera_bna_debito_automatico.user"/>
+    <menuitem name="BNA Barrido de Cuenta" id="menu_cobros" web_icon="financiera_bna_debito_automatico,static/description/icon.png" groups="financiera_bna_debito_automatico.user"/>
     
     <!-- menu categories -->
 
