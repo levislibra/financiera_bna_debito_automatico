@@ -177,7 +177,7 @@ class FinancieraBnaDebitoAutomaticoMovimiento(models.Model):
 			decimal_string += "0"
 		finalizar += (entera_string+decimal_string).zfill(15)
 		# Cantidad de registros tipo 2 que se envian N(6)
-		finalizar += str(len(self.cuota_ids)).zfill(6)
+		finalizar += str(len(self.movimiento_linea_ids)).zfill(6)
 		# Empresa envia 0 N(15) - BNA devuelve monto no aplicado
 		finalizar += "0".zfill(15)
 		# Empresa envia 0 N(6) - BNA cant de reg. no aplicados
@@ -354,7 +354,7 @@ class FinancieraBnaDebitoAutomaticoMovimiento(models.Model):
 			}
 			multi_factura_punitorio_id = self.env['financiera.prestamo.cuota.multi.factura'].create(fpcmf_values)
 		for linea_id in self.movimiento_linea_ids:
-			if linea_id.state == 'cobrado':
+			if linea_id.state == 'cobrado' and len(linea_id.cobro_id) == 0:
 				cuota_id = linea_id.cuota_id
 				partner_id = cuota_id.partner_id
 				fpcmc_values = {
@@ -364,6 +364,10 @@ class FinancieraBnaDebitoAutomaticoMovimiento(models.Model):
 				multi_cobro_id = self.env['financiera.prestamo.cuota.multi.cobro'].create(fpcmc_values)
 				partner_id.multi_cobro_ids = [multi_cobro_id.id]
 				cuota_id.confirmar_cobrar_cuota(payment_date, journal_id, linea_id.monto_debitado, multi_cobro_id)
+				cobro_id = None
+				if len(multi_cobro_id.payment_ids) > 0:
+					cobro_id = multi_cobro_id.payment_ids[0]
+				linea_id.cobro_id = cobro_id
 				# Facturacion cuota
 				if invoice:
 					if not cuota_id.facturada:
@@ -423,6 +427,7 @@ class FinancieraBnaDebitoAutomaticoMovimientoCuota(models.Model):
 		('rechazado', 'Rechazado'),
 		('cancelado', 'Cancelado')],
 		string='Estado', default='borrador')
+	cobro_id = fields.Many2one('account.payment', 'Cobro')
 	company_id = fields.Many2one('res.company', 'Empresa', required=False, default=lambda self: self.env['res.company']._company_default_get('financiera.bna.debito.automatico.movimiento.linea'))
 
 class ExtendsFinancieraPrestamo(models.Model):
