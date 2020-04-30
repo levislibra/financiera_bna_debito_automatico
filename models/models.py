@@ -434,8 +434,8 @@ class ExtendsFinancieraPrestamo(models.Model):
 	_name = 'financiera.prestamo'
 	_inherit = 'financiera.prestamo'
 
-	barrido_cbu_bna = fields.Boolean('Barrido por CBU Banco Nacion mediante archivo', compute='_compute_barrido_cbu_bna')
-	debito_automatico_cuota = fields.Boolean('Barrido por CBU Banco Nacion', default=False)
+	barrido_cbu_bna = fields.Boolean('Barrido de cuenta BNA mediante archivo', compute='_compute_barrido_cbu_bna')
+	debito_automatico_cuota = fields.Boolean('Barrido de cuenta BNA', default=False)
 	debito_automatico_cuota_cbu = fields.Many2one('res.partner.bank', 'CBU')
 
 	@api.one
