@@ -51,7 +51,11 @@ class FinancieraBnaDebitoAutomaticoMovimiento(models.Model):
 	archivo_generado = fields.Binary('Archivo generado')
 	archivo_generado_nombre = fields.Char('Nombre de archivo', compute='_compute_archivo_generado_nombre')
 	archivo_resultado = fields.Binary('Archivo resultado')
-	cuota_fecha_hasta = fields.Date("Fecha vencimiento cuota hasta")
+	cuota_fecha_desde = fields.Date("Desde")
+	cuota_fecha_hasta = fields.Date("Hasta")
+	sucursal = fields.Char("Sucursal")
+	comercio = fields.Char("Comercio")
+	partner = fields.Char("Cliente")
 	fecha_generacion_archivo = fields.Date("Fecha generacion de archivo")
 	cuota_ids = fields.Many2many('financiera.prestamo.cuota', 'financiera_bna_movimiento_cuota_rel', 'bna_movimiento_id', 'cuota_id', 'Cuotas')
 	movimiento_linea_ids = fields.One2many('financiera.bna.debito.automatico.movimiento.linea','movimiento_id', 'Resultados')
@@ -75,12 +79,23 @@ class FinancieraBnaDebitoAutomaticoMovimiento(models.Model):
 		cr = self.env.cr
 		uid = self.env.uid
 		cuota_obj = self.pool.get('financiera.prestamo.cuota')
-		cuota_ids = cuota_obj.search(cr, uid, [
+		domain = [
 			('state', '=', 'activa'),
 			('debito_automatico_cuota', '=', True),
 			('bna_debito_disponible', '=', True),
-			('fecha_vencimiento', '<=', self.cuota_fecha_hasta),
-			('company_id', '=', self.company_id.id)])
+			('bna_stop_debit', '=', False),
+			('company_id', '=', self.company_id.id)]
+		if self.cuota_fecha_desde != False and self.cuota_fecha_desde != None:
+			domain.append(('fecha_vencimiento', '>=', self.cuota_fecha_desde))
+		if self.cuota_fecha_hasta != False and self.cuota_fecha_hasta != None:
+			domain.append(('fecha_vencimiento', '<=', self.cuota_fecha_hasta))
+		if self.sucursal != False and self.sucursal != None:
+			domain.append(('sucursal_id.name', 'ilike', self.sucursal))
+		if self.comercio != False and self.comercio != None:
+			domain.append(('comercio_id.name', 'ilike', self.comercio))
+		if self.partner != False and self.partner != None:
+			domain.append(('partner_id.name', 'ilike', self.partner))
+		cuota_ids = cuota_obj.search(cr, uid, domain)
 		self.cuota_ids = [(6, 0, cuota_ids)]
 
 	@api.one
@@ -416,6 +431,7 @@ class FinancieraBnaDebitoAutomaticoMovimientoCuota(models.Model):
 	cuota_id = fields.Many2one('financiera.prestamo.cuota', 'Cuota')
 	partner_id = fields.Many2one('res.partner', 'Cliente', related='cuota_id.partner_id')
 	prestamo_id = fields.Many2one('financiera.prestamo', 'Prestamo', related='cuota_id.prestamo_id')
+	bna_stop_debit = fields.Boolean('Stop debit', related='cuota_id.bna_stop_debit')
 	monto_a_debitar = fields.Float('Monto a debitar', digits=(16,2))
 	monto_debitado = fields.Float('Monto debitado', digits=(16,2))
 	monto_no_debitado = fields.Float('Monto no debitado', digits=(16,2))
@@ -430,6 +446,10 @@ class FinancieraBnaDebitoAutomaticoMovimientoCuota(models.Model):
 	cobro_id = fields.Many2one('account.payment', 'Cobro')
 	company_id = fields.Many2one('res.company', 'Empresa', required=False, default=lambda self: self.env['res.company']._company_default_get('financiera.bna.debito.automatico.movimiento.linea'))
 
+	@api.one
+	def button_bna_stop_debit_change(self):
+		self.bna_stop_debit = not self.bna_stop_debit
+
 class ExtendsFinancieraPrestamo(models.Model):
 	_name = 'financiera.prestamo'
 	_inherit = 'financiera.prestamo'
@@ -437,10 +457,11 @@ class ExtendsFinancieraPrestamo(models.Model):
 	barrido_cbu_bna = fields.Boolean('Barrido de cuenta BNA mediante archivo', compute='_compute_barrido_cbu_bna')
 	debito_automatico_cuota = fields.Boolean('Barrido de cuenta BNA', default=False)
 	debito_automatico_cuota_cbu = fields.Many2one('res.partner.bank', 'CBU')
+	bna_stop_debit = fields.Boolean('Stop debit', default=False)
 
 	@api.one
 	def _compute_barrido_cbu_bna(self):
-		self.barrido_cbu_bna = self.env.user.company_id.barrido_cbu_bna
+		self.barrido_cbu_bna = self.company_id.barrido_cbu_bna
 
 	@api.onchange('debito_automatico_cuota')
 	def _onchange_debito_automatico_cuota(self):
@@ -458,6 +479,9 @@ class ExtendsFinancieraPrestamo(models.Model):
 			cuota_id.debito_automatico_cuota_cbu = self.debito_automatico_cuota_cbu
 			cuota_id.debito_bank_id = self.debito_automatico_cuota_cbu.bank_id.id
 
+	@api.one
+	def button_bna_stop_debit_change(self):
+		self.bna_stop_debit = not self.bna_stop_debit
 
 class ExtendsFinancieraPrestamoCuota(models.Model):
 	_name = 'financiera.prestamo.cuota'
@@ -467,4 +491,4 @@ class ExtendsFinancieraPrestamoCuota(models.Model):
 	bna_debito_automatico_linea_ids = fields.One2many('financiera.bna.debito.automatico.movimiento.linea', 'cuota_id', 'BNA resultados de debitos')
 	bna_debito_disponible = fields.Boolean('Disponible para debito BNA?', default=True)
 	bna_debito_partes = fields.Float('Debitar en partes de', default=-1.00)
-
+	bna_stop_debit = fields.Boolean('Stop debit', related='prestamo_id.bna_stop_debit')

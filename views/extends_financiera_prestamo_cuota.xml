@@ -8,7 +8,8 @@
 	      <field name="inherit_id" ref="financiera_prestamos.financiera_prestamo_cuota_form"/>
 	      <field name="arch" type="xml">        
 	        <xpath expr="//field[@name='debito_bank_id']" position="after">
-	          <field name="bna_debito_disponible"/>
+			  <field name="bna_debito_disponible"/>
+			  <field name="bna_stop_debit" readonly="1"/>
 	        </xpath>
 	      </field>
 	    </record>

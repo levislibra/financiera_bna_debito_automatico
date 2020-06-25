@@ -119,11 +119,21 @@
             </group>
             <notebook>
               <page string="Cuotas">
-                <group>
-                  <group>
+                <group col="5">
+                  <group col="1">
+                    <field name="cuota_fecha_desde" attrs="{'readonly': [('state', '!=', 'borrador')]}"/>
+                  </group>
+                  <group col="1">
                     <field name="cuota_fecha_hasta" attrs="{'readonly': [('state', '!=', 'borrador')]}"/>
                   </group>
-                  <group>
+                  <group col="1">
+                    <field name="sucursal" attrs="{'readonly': [('state', '!=', 'borrador')]}"/>
+                  </group>
+                  <group col="1">
+                    <field name="comercio" attrs="{'readonly': [('state', '!=', 'borrador')]}"/>
+                  </group>
+                  <group col="1">
+                    <field name="partner" attrs="{'readonly': [('state', '!=', 'borrador')]}"/>
                   </group>
                 </group>
                 <button name="asignar_cuotas" states="borrador" string="Asignar cuotas" type="object" class="oe_highlight"/>
@@ -139,6 +149,8 @@
                       <field name="cobrado" widget="monetary" options="{'currency_field': 'currency_id'}" sum="Total"/>
                       <field name="saldo" widget="monetary" options="{'currency_field': 'currency_id'}" sum="Total"/>
                       <field name="bna_debito_partes" widget="monetary" options="{'currency_field': 'currency_id'}" editable="1"/>
+                      <field name="sucursal_id" readonly="1"/>
+                      <field name="comercio_id" readonly="1"/>
                     </tree>
                 </field>
               </page>
@@ -160,6 +172,8 @@
                     <field name="descripcion"/>
                     <field name="fecha_debito"/>
                     <field name="state"/>
+                    <field name="bna_stop_debit"/>
+                    <button name="button_bna_stop_debit_change" string="Cambiar" type="object" confirm="Desea cambiar el estado de Stop Debit para este Prestamo?"/>
                   </tree>
                 </field>
               </page>
@@ -179,6 +193,38 @@
         (0, 0, {'view_mode': 'form', 'view_id': ref('movimiento_form')})]"/>
     </record>
 
+        <!-- configuracion tree -->
+    
+    <!-- <record model="ir.ui.view" id="prestamos_con_stop_debit_tree">
+      <field name="name">financiera.prestamo tree</field>
+      <field name="model">financiera.prestamo</field>
+      <field name="arch" type="xml">
+        <tree decoration-muted="state == 'cancelado'" decoration-danger="state in ('solicitado', 'revision', 'autorizado')" decoration-success="state == 'pagado'" decoration-warning="state == 'acreditacion_pendiente'">
+          <field name="partner_id"/>
+          <field name="fecha"/>
+          <field name="name"/>
+          <field name="prestamo_tipo_id"/>
+          <field name="responsable_id" widget="many2one_unclickable"/>
+          <field name="monto_solicitado" sum="Total"/>
+          <field name="saldo" sum="Total"/>
+          <field name="plan_id"/>
+          <field name="sucursal_id"/>
+          <field name="state"/>
+          <field name="origen_id"/>
+          <field name="company_id" groups="base.group_erp_manager"/>
+        </tree>
+      </field>
+    </record> -->
+    
+    <record model="ir.actions.act_window" id="prestamo_stop_debit_action">
+      <field name="name">Prestamos con Stop debit</field>
+      <field name="res_model">financiera.prestamo</field>
+      <field name="view_mode">tree,form</field>
+      <field name="domain">[('bna_stop_debit', '=', True)]</field>
+      <field name="view_ids" eval="[(5, 0, 0), 
+        (0, 0, {'view_mode': 'tree', 'view_id': ref('financiera_prestamos.financiera_prestamo_tree')})]"/>
+    </record>
+
     <!-- Prestamo inherit -->
 
     <record id="prestamo_form_inherited"  model="ir.ui.view">
@@ -190,6 +236,10 @@
           <field name="barrido_cbu_bna" invisible="1"/>
           <field name="debito_automatico_cuota" attrs="{'readonly': [('barrido_cbu_bna', '=', False)]}" style="width: 20%"/>
           <field name="debito_automatico_cuota_cbu" options="{'no_quick_create':True,'no_create_edit':True,'no_open':True}" domain="[('partner_id', '=', partner_id)]" attrs="{'invisible': [('debito_automatico_cuota', '=', False)], 'required': [('debito_automatico_cuota', '=', True)]}"/>
+          <group col="3" attrs="{'invisible': [('debito_automatico_cuota', '=', False)]}">
+            <field name="bna_stop_debit"/>
+            <button name="button_bna_stop_debit_change" string="Cambiar" type="object" confirm="Desea cambiar el estado de Stop Debit para este Prestamo?"/>
+          </group>
         </xpath>
       </field>
     </record>
@@ -219,13 +269,14 @@
     
     <!-- menu categories -->
 
-    <menuitem name="Movimientos" id="menu_bna_movimientos" sequence="10" parent="menu_cobros"/>
+    <!-- <menuitem name="Movimientos" id="menu_bna_movimientos" sequence="10" parent="menu_cobros"/> -->
     <menuitem name="Configuracion" id="menu_bna_configuracion" sequence="20" parent="menu_cobros"/>
 
     <!-- actions -->
 
-    <menuitem name="Movimientos" id="menu_movimientos_action" parent="menu_bna_movimientos" action="movimiento_action" sequence="0"/>
-    
+    <menuitem name="Movimientos" id="menu_movimientos_action" parent="menu_cobros" action="movimiento_action" sequence="0"/>
+    <menuitem name="Prestamos con Stop Debit" id="menu_prestamo_stop_debit_action" parent="menu_cobros" action="prestamo_stop_debit_action" sequence="10"/>
+
     <menuitem name="Cuentas Recaudacion" id="menu_configuracion_action" parent="menu_bna_configuracion" action="configuracion_action" sequence="0"/>
 
   </data>
