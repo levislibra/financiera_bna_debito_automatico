@@ -283,6 +283,9 @@ class FinancieraBnaDebitoAutomaticoMovimiento(models.Model):
 						monto_no_debitado += linea_id.monto_a_debitar
 						registros_no_aplicados += 1
 						linea_id.cuota_id.bna_debito_disponible = True
+					else:
+						linea_id.descripcion = registro[42:72]
+						linea_id.cuota_id.bna_debito_disponible = True
 			i += 1
 		# if round(monto_debitado, 2) != round(self.monto_debitado, 2):
 		# 	raise ValidationError("El monto debitado del registro 3 es inconcistente.")
@@ -426,10 +429,11 @@ class FinancieraBnaDebitoAutomaticoMovimiento(models.Model):
 class FinancieraBnaDebitoAutomaticoMovimientoCuota(models.Model):
 	_name = 'financiera.bna.debito.automatico.movimiento.linea'
 
+	_order = 'partner_id asc, cuota_id asc'
 	_rec = 'cuota_id'
 	movimiento_id = fields.Many2one('financiera.bna.debito.automatico.movimiento', 'Movimiento de debito automatico')
 	cuota_id = fields.Many2one('financiera.prestamo.cuota', 'Cuota')
-	partner_id = fields.Many2one('res.partner', 'Cliente', related='cuota_id.partner_id')
+	partner_id = fields.Many2one('res.partner', 'Cliente', related='cuota_id.partner_id', store=True)
 	prestamo_id = fields.Many2one('financiera.prestamo', 'Prestamo', related='cuota_id.prestamo_id')
 	bna_stop_debit = fields.Boolean('Stop debit', related='cuota_id.bna_stop_debit')
 	monto_a_debitar = fields.Float('Monto a debitar', digits=(16,2))
