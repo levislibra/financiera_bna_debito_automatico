@@ -233,13 +233,17 @@
       <field name="inherit_id" ref="financiera_prestamos.financiera_prestamo_form"/>
       <field name="arch" type="xml">        
         <xpath expr="//field[@name='pago_voluntario_entidad']" position='after'>
-          <field name="barrido_cbu_bna" invisible="1"/>
+				<div>
+					<field name="barrido_cbu_bna" invisible="1"/>
+					<label string="Barrido de cuenta BNA" style="font-weight: bold;"/>
           <field name="debito_automatico_cuota" attrs="{'readonly': [('barrido_cbu_bna', '=', False)]}" style="width: 20%"/>
           <field name="debito_automatico_cuota_cbu" options="{'no_quick_create':True,'no_create_edit':True,'no_open':True}" domain="[('partner_id', '=', partner_id)]" attrs="{'invisible': [('debito_automatico_cuota', '=', False)], 'required': [('debito_automatico_cuota', '=', True)]}"/>
-          <group col="3" attrs="{'invisible': [('debito_automatico_cuota', '=', False)]}">
-            <field name="bna_stop_debit"/>
-            <button name="button_bna_stop_debit_change" string="Cambiar" type="object" confirm="Desea cambiar el estado de Stop Debit para este Prestamo?"/>
-          </group>
+				</div>
+				<div attrs="{'invisible': [('debito_automatico_cuota', '=', False)]}">
+					<label string="Stop debito" style="font-weight: bold;"/>
+					<field name="bna_stop_debit"/>
+					<button name="button_bna_stop_debit_change" string="Cambiar" type="object" confirm="Desea cambiar el estado de Stop Debit para este Prestamo?"/>
+				</div>
         </xpath>
       </field>
     </record>
