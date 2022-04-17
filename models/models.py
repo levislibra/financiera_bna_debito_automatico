@@ -54,7 +54,6 @@ class FinancieraBnaDebitoAutomaticoMovimiento(models.Model):
 	cuota_fecha_desde = fields.Date("Desde")
 	cuota_fecha_hasta = fields.Date("Hasta")
 	sucursal = fields.Char("Sucursal")
-	comercio = fields.Char("Comercio")
 	partner = fields.Char("Cliente")
 	fecha_generacion_archivo = fields.Date("Fecha generacion de archivo")
 	cuota_ids = fields.Many2many('financiera.prestamo.cuota', 'financiera_bna_movimiento_cuota_rel', 'bna_movimiento_id', 'cuota_id', 'Cuotas')
@@ -91,8 +90,6 @@ class FinancieraBnaDebitoAutomaticoMovimiento(models.Model):
 			domain.append(('fecha_vencimiento', '<=', self.cuota_fecha_hasta))
 		if self.sucursal != False and self.sucursal != None:
 			domain.append(('sucursal_id.name', 'ilike', self.sucursal))
-		if self.comercio != False and self.comercio != None:
-			domain.append(('comercio_id.name', 'ilike', self.comercio))
 		if self.partner != False and self.partner != None:
 			domain.append(('partner_id.name', 'ilike', self.partner))
 		cuota_ids = cuota_obj.search(cr, uid, domain)
@@ -152,9 +149,6 @@ class FinancieraBnaDebitoAutomaticoMovimiento(models.Model):
 					saldo_cuota_a_debitar -= monto_a_debitar
 					if monto_a_debitar > 0:
 						saldo_lista = str(monto_a_debitar).split(".")
-						print(monto_a_debitar)
-						print("MONTO A DEBITAR:: ")
-						print(saldo_lista)
 						entera_string = saldo_lista[0]
 						decimal_string = saldo_lista[1]
 						if len(decimal_string) == 1:

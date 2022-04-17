@@ -130,9 +130,6 @@
                     <field name="sucursal" attrs="{'readonly': [('state', '!=', 'borrador')]}"/>
                   </group>
                   <group col="1">
-                    <field name="comercio" attrs="{'readonly': [('state', '!=', 'borrador')]}"/>
-                  </group>
-                  <group col="1">
                     <field name="partner" attrs="{'readonly': [('state', '!=', 'borrador')]}"/>
                   </group>
                 </group>
@@ -150,7 +147,6 @@
                       <field name="saldo" widget="monetary" options="{'currency_field': 'currency_id'}" sum="Total"/>
                       <field name="bna_debito_partes" widget="monetary" options="{'currency_field': 'currency_id'}" editable="1"/>
                       <field name="sucursal_id" readonly="1"/>
-                      <field name="comercio_id" readonly="1"/>
                     </tree>
                 </field>
               </page>
